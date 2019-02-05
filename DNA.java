@@ -7,35 +7,137 @@ class DNA
 {
     public static int gap_penalty;
     public static int h;
-    public static int match = 0;
-    public static int mismatch = 0;
+    public static int match = 1;
+    public static int mismatch = -2;
     
-    public static int findSubs(char[] s1, char[] s2, Cell[][] table)
+    public static Cell[][] globalForword(char[] s1, char[] s2)
     {
-        int max_score = 0;
+        Cell[][] table = initGlobalCells(s1.length, s2.length);
+
         for(int i=1; i<table.length; i++)
         {
             for(int j=1; j<table[0].length; j++)
             {
                 table[i][j] = new Cell(0, 0, 0);
-                table[i][j].sub_score = Math.max(table[i-1][j-1].sub_score, Math.max(table[i-1][j-1].del_score, table[i-1][j-1].ins_score)) + substitution(s1[i-1], s2[j-1]);
+                table[i][j].sub_score = substitution_score(table, i, j, s1, s2);
 
+                table[i][j].del_score = deletion_score(table, i, j);
 
-                table[i][j].del_score = Math.max(table[i-1][j].sub_score + (h + gap_penalty), Math.max(table[i-1][j].del_score + gap_penalty, table[i-1][j].ins_score + (h + gap_penalty)));
+                table[i][j].ins_score = insertion_score(table, i, j);
 
-                table[i][j].ins_score = Math.max(table[i][j-1].sub_score + (h + gap_penalty), Math.max(table[i][j-1].del_score + (h + gap_penalty), table[i][j-1].ins_score + gap_penalty));
+                int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
+                if(max < 0)
+                    table[i][j].score = 0;
+                else
+                    table[i][j].score = max;
             }
         }
+        return table;
+    }
 
-        return Math.max(table[s1.length][s2.length].sub_score, Math.max(table[s1.length][s2.length].del_score, table[s1.length][s2.length].ins_score));
+    private static int deletion_score(Cell[][] table, int i, int j)
+    {
+        return Math.max(table[i-1][j].sub_score + (h + gap_penalty), Math.max(table[i-1][j].del_score + gap_penalty, table[i-1][j].ins_score + (h + gap_penalty)));
+    }
+
+    private static int insertion_score(Cell[][] table, int i, int j)
+    {
+        return Math.max(table[i][j-1].sub_score + (h + gap_penalty), Math.max(table[i][j-1].del_score + (h + gap_penalty), table[i][j-1].ins_score + gap_penalty));
+    }
+
+    private static int substitution_score(Cell[][] table, int i, int j, char[] s1, char[] s2)
+    {
+        return Math.max(table[i-1][j-1].sub_score, Math.max(table[i-1][j-1].del_score, table[i-1][j-1].ins_score)) + substitution(s1[i-1], s2[j-1]);
     }
 
     private static int substitution(char a, char b)
     {
         if(a == b)
-            return 1;
+            return match;
 
-        return -2;
+        return mismatch;
+    }
+
+    public static void globalBacktrack(char[] s1, char[] s2, Cell[][] table)
+    {
+        String AlignmentA = "";
+        String AlignmentB = "";
+        int i = s1.length;
+        int j = s2.length;
+
+        while (i > 0 || j > 0)
+        {
+            if (i > 0 && j > 0 && table[i][j].score == substitution_score(table, i, j, s1, s2))
+            {
+                AlignmentA = s1[i-1] + AlignmentA;
+                AlignmentB = s2[j-1] + AlignmentB;
+                i = i - 1;
+                j = j - 1;
+            }
+            else if (i > 0 && table[i][j].score == deletion_score(table, i, j))
+            {
+                AlignmentA = s1[i-1] + AlignmentA;
+                AlignmentB = "-" + AlignmentB;
+                i = i - 1;
+            }
+            else
+            {
+                AlignmentA = "-" + AlignmentA;
+                AlignmentB = s2[j-1] + AlignmentB;
+                j = j - 1;
+            }
+        }
+        printAlignment(AlignmentA, AlignmentB);
+    }
+
+    private static void printAlignment(String s1, String s2)
+    {
+        int no_of_gaps = 0;
+        int no_of_matches = 0;
+        int no_of_mismatch = 0;
+        int no_of_opening_gaps = 0;
+        StringBuilder middle = new StringBuilder(s1.length());
+
+        int i = 0;
+        while(i < s1.length())
+        {
+            if(s1.charAt(i) == s2.charAt(i))
+            {
+                middle.append('|');
+                no_of_matches++;
+            }
+            else if(s1.charAt(i) == '-')
+            {
+                if(i>0 && s1.charAt(i-1) != '-')
+                    no_of_opening_gaps++;
+
+                middle.append(' ');
+                no_of_gaps++;
+            }
+            else if(s2.charAt(i) == '-')
+            {
+                if(i>0 && s2.charAt(i-1) != '-')
+                    no_of_opening_gaps++;
+
+                middle.append(' ');
+                no_of_gaps++;
+            }
+            else
+            {
+                middle.append(' ');
+                no_of_mismatch++;
+            }
+            i++;
+        }
+
+        System.out.println(s1);
+        System.out.println(middle.toString());
+        System.out.println(s2);
+
+        System.out.println("Matches: " + no_of_matches);
+        System.out.println("Mismatches: " + no_of_mismatch);
+        System.out.println("Gaps: " + no_of_gaps);
+        System.out.println("Opening Gaps: "+ no_of_opening_gaps);
     }
 
     public static String[] readFile(String file) throws IOException
@@ -67,39 +169,8 @@ class DNA
         }
         return dnaStrings;
     }
-/*
-    private static void printSubs(int[][] table, char[] s1, char[] s2, int max)
-    {
-        char[] subs = new char[max];
-        
-        int i = table.length-1, j = table[0].length-1;
-        while(table[i][j] != 0)
-        {
-            if(table[i][j] == Math.max(table[i-1][j], table[i][j-1]))
-            {
 
-                if(table[i][j] == table[i][j-1])
-                    j = j-1;
-                else
-                    i = i-1;  
-            }
-            else if(table[i][j] == table[i-1][j] && table[i][j] == table[i][j-1])
-            {
-                i -= 1;
-            }
-            else if(table[i][j] > Math.max(table[i-1][j], table[i][j-1]))
-            {
-                subs[--max] = s1[i-1];
-
-                i--;
-                j--;
-            }
-        }
-
-        System.out.println(subs);
-    }
-*/
-    public static Cell[][] init(int len1, int len2)
+    private static Cell[][] initGlobalCells(int len1, int len2)
     {
         Cell[][] table = new Cell[len1+1][len2+1];
 
@@ -115,6 +186,23 @@ class DNA
         for(int i=2; i<table.length; i++)   // set 0th column 
         {
             table[i][0] = new Cell(Integer.MIN_VALUE+100, table[i-1][0].del_score + gap_penalty, Integer.MIN_VALUE+100);
+        }
+
+        return table;
+    }
+
+    private static Cell[][] initLocalCells(int len1, int len2)
+    {
+        Cell[][] table = new Cell[len1+1][len2+1];
+
+        for(int j=0; j<table[0].length; j++)   // set 0th row 
+        {
+            table[0][j] = new Cell(0, 0, 0);
+        }
+
+        for(int i=0; i<table.length; i++)   // set 0th column 
+        {
+            table[i][0] = new Cell(0, 0, 0);
         }
 
         return table;
@@ -145,9 +233,9 @@ class DNA
         System.out.println(s1.length());
         System.out.println(s2.length());
 
-        Cell[][] table = init(s1.length(), s2.length());
-        int max_score = findSubs(s1.toUpperCase().toCharArray(), s2.toUpperCase().toCharArray(), table);
+        Cell[][] table = globalForword(s1.toUpperCase().toCharArray(), s2.toUpperCase().toCharArray()); 
+        globalBacktrack(s1.toCharArray(), s2.toCharArray(), table);
 
-        System.out.println("score: " + max_score);
+        
     }
 }
