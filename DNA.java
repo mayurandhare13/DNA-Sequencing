@@ -26,10 +26,38 @@ class DNA
                 table[i][j].ins_score = insertion_score(table, i, j);
 
                 int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
+                // if(max < 0)
+                //     table[i][j].score = 0;
+                // else
+                //     table[i][j].score = max;
+                table[i][j].score = max;
+            }
+        }
+        return table;
+    }
+
+    public static Cell[][] localForword(char[] s1, char[] s2)
+    {
+        Cell[][] table = initLocalCells(s1.length, s2.length);
+
+        for(int i=1; i<table.length; i++)
+        {
+            for(int j=1; j<table[0].length; j++)
+            {
+                table[i][j] = new Cell(0, 0, 0);
+                table[i][j].sub_score = substitution_score(table, i, j, s1, s2);
+
+                table[i][j].del_score = deletion_score(table, i, j);
+
+                table[i][j].ins_score = insertion_score(table, i, j);
+
+                int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
+                
                 if(max < 0)
                     table[i][j].score = 0;
                 else
                     table[i][j].score = max;
+                
             }
         }
         return table;
@@ -58,8 +86,9 @@ class DNA
         return mismatch;
     }
 
-    public static void globalBacktrack(char[] s1, char[] s2, Cell[][] table)
+    public static String[] globalBacktrack(char[] s1, char[] s2, Cell[][] table)
     {
+        String[] finAlign = new String[2];
         String AlignmentA = "";
         String AlignmentB = "";
         int i = s1.length;
@@ -87,10 +116,13 @@ class DNA
                 j = j - 1;
             }
         }
-        printAlignment(AlignmentA, AlignmentB);
+
+        finAlign[0] = AlignmentA;
+        finAlign[1] = AlignmentB;
+        return finAlign;
     }
 
-    private static void printAlignment(String s1, String s2)
+    private static String calValues(String s1, String s2)
     {
         int no_of_gaps = 0;
         int no_of_matches = 0;
@@ -130,14 +162,78 @@ class DNA
             i++;
         }
 
-        System.out.println(s1);
-        System.out.println(middle.toString());
-        System.out.println(s2);
-
         System.out.println("Matches: " + no_of_matches);
         System.out.println("Mismatches: " + no_of_mismatch);
         System.out.println("Gaps: " + no_of_gaps);
         System.out.println("Opening Gaps: "+ no_of_opening_gaps);
+
+        return middle.toString();
+    }
+
+    public static void printAlign(char[] s1, char[] s2, char[] middle)
+    {
+        int c1 = 0;
+        int c2 = 0;
+        int prev;
+        int len = middle.length;
+
+        for(int i=0; i< len; i+= 60)
+        {
+            int count = 0;
+            if(i+60 >= len)
+            {
+                prev = s1[i+0] != '-' ? c1+1 : c1; 
+                System.out.print("s1\t" + prev + "\t");
+                for(int j=i+0; j < len; j++)
+                {
+                    if(s1[j] != '-')
+                        c1++;
+                    System.out.print(s1[j]);
+                }
+                System.out.print("\t" + c1 + "\n");
+
+                System.out.print(" \t\t");
+                for(int j=i+0; j < len; j++)
+                    System.out.print(middle[j]);
+                System.out.println();
+
+                prev = s2[i+0] != '-' ? c2+1 : c2; 
+                System.out.print("s2\t" + prev + "\t");
+                for(int j=i+0; j < len; j++)
+                {
+                    if(s2[j] != '-')
+                        c2++;
+                    System.out.print(s2[j]);
+                }
+                System.out.print("\t" + c2 + "\n");
+                break;
+            }
+            
+            prev = s1[i+0] != '-' ? c1+1 : c1; 
+            System.out.print("s1\t" + prev + "\t");
+            for(int j=i+0; j < i+60; j++)
+            {
+                if(s1[j] != '-')
+                    c1++;
+                System.out.print(s1[j]);
+            }
+            System.out.print("\t" + c1 + "\n");
+
+            System.out.print(" \t\t");
+            for(int j=i+0; j < i+60; j++)
+                System.out.print(middle[j]);
+            System.out.println();
+
+            prev = s2[i+0] != '-' ? c2+1 : c2; 
+            System.out.print("s2\t" + prev + "\t");
+            for(int j=i+0; j < i+60; j++)
+            {
+                if(s2[j] != '-')
+                    c2++;
+                System.out.print(s2[j]);
+            }
+            System.out.print("\t" + c2 + "\n\n");
+        }
     }
 
     public static String[] readFile(String file) throws IOException
@@ -210,32 +306,32 @@ class DNA
     
     public static void main(String[] args) throws IOException
     {
-        // String inFile = null;
-        // if (0 < args.length) 
-        // {
-        //     inFile = args[0];
-        // } 
-        // else 
-        // {
-        //     System.err.println("Invalid arguments count:" + args.length);
-        //     System.exit(0);
-        // }
+        String inFile = null;
+        if (0 < args.length) 
+        {
+            inFile = args[0];
+        } 
+        else 
+        {
+            System.err.println("Invalid arguments count:" + args.length);
+            System.exit(0);
+        }
 
         gap_penalty = -2;
         h = -5;
-        // String[] dnaStrings = readFile(inFile);
+        String[] dnaStrings = readFile(inFile);
 
-        // init(dnaStrings[0].length(), dnaStrings[1].length());
+        //String s1 = "ACATGCTACACGTATCCGATACCCCGTAACCGATAACGATACACAGACCTCGTACGCTTGCTACAACGTACTCTATAACCGAGAACGATTGACATGCCTCGTACACATGCTACACGTACTCCGAT";
+        //String s2 = "ACATGCGACACTACTCCGATACCCCGTAACCGATAACGATACAGAGACCTCGTACGCTTGCTAATAACCGAGAACGATTGACATTCCTCGTACAGCTACACGTACTCCGAT";
 
-        String s1 = "ACATGCTACACGTATCCGATACCCCGTAACCGATAACGATACACAGACCTCGTACGCTTGCTACAACGTACTCTATAACCGAGAACGATTGACATGCCTCGTACACATGCTACACGTACTCCGAT";
-        String s2 = "ACATGCGACACTACTCCGATACCCCGTAACCGATAACGATACAGAGACCTCGTACGCTTGCTAATAACCGAGAACGATTGACATTCCTCGTACAGCTACACGTACTCCGAT";
+        System.out.println(dnaStrings[0].length());
+        System.out.println(dnaStrings[1].length());
 
-        System.out.println(s1.length());
-        System.out.println(s2.length());
+        Cell[][] table = globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
 
-        Cell[][] table = globalForword(s1.toUpperCase().toCharArray(), s2.toUpperCase().toCharArray()); 
-        globalBacktrack(s1.toCharArray(), s2.toCharArray(), table);
-
+        String[] finAlign = globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
         
+        String middle = calValues(finAlign[0], finAlign[1]);
+        printAlign(finAlign[0].toCharArray(), finAlign[1].toCharArray(), middle.toCharArray());
     }
 }
