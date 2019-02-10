@@ -27,15 +27,9 @@ class DNA
                 table[i][j].del_score = deletion_score(table, i, j);
 
                 table[i][j].ins_score = insertion_score(table, i, j);
-
-                int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
-                // if(max < 0)
-                //     table[i][j].score = 0;
-                // else
-                //     table[i][j].score = max;
-                table[i][j].score = max;
             }
         }
+        System.out.println("global score "+ Math.max(table[s1.length][s2.length].ins_score, Math.max(table[s1.length][s2.length].del_score, table[s1.length][s2.length].sub_score)));
         return table;
     }
 
@@ -56,40 +50,14 @@ class DNA
 
                 int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
                 
-                if(max < 0)
-                    table[i][j].score = 0;
-                else
-                    table[i][j].score = max;
-                
             }
         }
         return table;
     }
 
-    private static int deletion_score(Cell[][] table, int i, int j)
-    {
-        return Math.max(table[i-1][j].sub_score + (h + gap_penalty), Math.max(table[i-1][j].del_score + gap_penalty, table[i-1][j].ins_score + (h + gap_penalty)));
-    }
-
-    private static int insertion_score(Cell[][] table, int i, int j)
-    {
-        return Math.max(table[i][j-1].sub_score + (h + gap_penalty), Math.max(table[i][j-1].del_score + (h + gap_penalty), table[i][j-1].ins_score + gap_penalty));
-    }
-
-    private static int substitution_score(Cell[][] table, int i, int j, char[] s1, char[] s2)
-    {
-        return Math.max(table[i-1][j-1].sub_score, Math.max(table[i-1][j-1].del_score, table[i-1][j-1].ins_score)) + substitution(s1[i-1], s2[j-1]);
-    }
-
-    private static int substitution(char a, char b)
-    {
-        return a == b ? match : mismatch;
-    }
-
-    public static void globalBacktrack1(char[] str1, char[] str2, Cell[][] table)
+    public static void globalBacktrack(char[] str1, char[] str2, Cell[][] table)
     {
 
-        int maximum;
         int m = str1.length;
         int n = str2.length;
         int i = m;
@@ -195,70 +163,43 @@ class DNA
 
     }
 
-    public static String[] globalBacktrack(char[] s1, char[] s2, Cell[][] table)
+    public static void localBacktrack(char[] str1, char[] str2, Cell[][] table)
     {
-        String[] finAlign = new String[2];
-        String AlignmentA = "";
-        String AlignmentB = "";
-        int i = s1.length;
-        int j = s2.length;
-
-        while (i > 0 || j > 0)
-        {
-            if (i > 0 && j > 0 && table[i][j].score == substitution_score(table, i, j, s1, s2))
-            {
-                AlignmentA = s1[i-1] + AlignmentA;
-                AlignmentB = s2[j-1] + AlignmentB;
-                i = i - 1;
-                j = j - 1;
-            }
-            else if (i > 0 && table[i][j].score == deletion_score(table, i, j))
-            {
-                AlignmentA = s1[i-1] + AlignmentA;
-                AlignmentB = "-" + AlignmentB;
-                i = i - 1;
-            }
-            else
-            {
-                AlignmentA = "-" + AlignmentA;
-                AlignmentB = s2[j-1] + AlignmentB;
-                j = j - 1;
-            }
-        }
-
-        finAlign[0] = AlignmentA;
-        finAlign[1] = AlignmentB;
-        return finAlign;
-    }
-
-    public static void localBacktrack1(char[] str1, char[] str2, Cell[][] table)
-    {
-
-        int maximum;
         int m = str1.length;
         int n = str2.length;
         int i = m;
         int j = n;
+        int max_i = 0;
+        int max_j = 0;
 
-        optimum_score = Math.max(table[m][n].ins_score, Math.max(table[m][n].del_score, table[m][n].sub_score));
+        optimum_score = Integer.MIN_VALUE;
+        for(int r = i; r > 0; r--)
+        {
+            for(int c = j; c > 0; c--)
+            {
+                int max = Math.max(table[r][c].ins_score, Math.max(table[r][c].del_score, table[r][c].sub_score));
+                if(optimum_score < max)
+                {
+                    optimum_score = max;
+                    max_i = r;
+                    max_j = c;
+                }
+            }
+        }
+        
+        int current_value = optimum_score;
+        System.out.println(current_value);
+        i = max_i;
+        j = max_j;
 
-        int current_value = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
-
-        char direction = '-';
-
-        if(current_value == table[i][j].sub_score) direction = 'S';
-        if(current_value == table[i][j].del_score) direction = 'D';
-        if(current_value == table[i][j].ins_score) direction = 'I';
-
-        while(i > 0 && j > 0)
+        while(i > 0 && j > 0 && (current_value > 0))
         {
 
             int temp_s;
             int temp_d;
             int temp_i;
-            //System.out.println("hi");
 
-            if(table[i][j].ins_score == current_value && direction == 'I')
+            if(table[i][j].ins_score == current_value)
             {
                 finalS1 = "-" + finalS1;
                 finalS2 = str2[j-1] + finalS2;
@@ -271,21 +212,19 @@ class DNA
                 if(table[i][j].ins_score == temp_s)
                 {
                     current_value = table[i][j - 1].sub_score;
-                    direction = 'S';
+                  
                 }
                 else if(table[i][j].ins_score == temp_d)
                 {
                     current_value = table[i][j - 1].del_score;
-                    direction = 'D';
                 }
                 else
                 {
                     current_value = table[i][j - 1].ins_score;
-                    direction = 'I';
                 }
                 j--;
             }
-            else if(table[i][j].del_score == current_value && direction == 'D')
+            else if(table[i][j].del_score == current_value )
             {
                 finalS1 = str1[i-1] + finalS1;
                 finalS2 = "-" + finalS2;
@@ -298,20 +237,19 @@ class DNA
                 if(table[i][j].del_score == temp_s)
                 {
                     current_value = table[i - 1][j].sub_score;
-                    direction = 'S';
+                   
                 }
                 else if(table[i][j].del_score == temp_d)
                 {
                     current_value = table[i - 1][j].del_score;
-                    direction = 'D';
+                   
                 }
                 else
                 {
                     current_value = table[i - 1][j].ins_score;
-                    direction = 'I';
+                    
                 }
                 i--;
-
             }
             else
             {
@@ -326,17 +264,17 @@ class DNA
                 if(table[i][j].sub_score == temp_s)
                 {
                     current_value = table[i - 1][j - 1].sub_score;
-                    direction = 'S';
+                    
                 }
                 else if(table[i][j].sub_score == temp_d)
                 {
                     current_value = table[i - 1][j - 1].del_score;
-                    direction = 'D';
+                
                 }
                 else
                 {
                     current_value = table[i - 1][j - 1].ins_score;
-                    direction = 'I';
+                    
                 }
                 i--;
                 j--;
@@ -344,6 +282,26 @@ class DNA
 
         }
 
+    }
+
+    private static int deletion_score(Cell[][] table, int i, int j)
+    {
+        return Math.max(table[i-1][j].sub_score + (h + gap_penalty), Math.max(table[i-1][j].del_score + gap_penalty, table[i-1][j].ins_score + (h + gap_penalty)));
+    }
+
+    private static int insertion_score(Cell[][] table, int i, int j)
+    {
+        return Math.max(table[i][j-1].sub_score + (h + gap_penalty), Math.max(table[i][j-1].del_score + (h + gap_penalty), table[i][j-1].ins_score + gap_penalty));
+    }
+
+    private static int substitution_score(Cell[][] table, int i, int j, char[] s1, char[] s2)
+    {
+        return Math.max(table[i-1][j-1].sub_score, Math.max(table[i-1][j-1].del_score, table[i-1][j-1].ins_score)) + substitution(s1[i-1], s2[j-1]);
+    }
+
+    private static int substitution(char a, char b)
+    {
+        return a == b ? match : mismatch;
     }
 
     private static String calValues(String s1, String s2)
@@ -554,7 +512,7 @@ class DNA
         Cell[][] table = globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
 
        // String[] finAlign = globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
-        globalBacktrack1(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
+        globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
         
         String middle = calValues(finalS1, finalS2);
         printAlign(finalS1.toCharArray(), finalS2.toCharArray(), middle.toCharArray());
