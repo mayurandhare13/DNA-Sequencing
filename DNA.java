@@ -1,19 +1,37 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 
 class DNA
 {
-    public static int gap_penalty;
-    public static int h;
-    public static int match = 1;
-    public static int mismatch = -2;
-    public static String finalS1 = "";
-    public static String finalS2 = "";
-    static int optimum_score = 0;
+    int gap_penalty, h, match, mismatch, optimum_score, no_of_gaps, no_of_matches, no_of_mismatch, no_of_opening_gaps;
+    String finalS1, finalS2, middle;
+    String[] dnaStrings;
+    File outFile;
+
+    public DNA()
+    {
+        gap_penalty = -2;
+        h = -5;
+        match = 1;
+        mismatch = -2;
+        finalS1 = "";
+        finalS2 = "";
+        optimum_score = 0;
+        middle = "";
+        outFile = new File("output.txt");
+        no_of_gaps = 0;
+        no_of_matches = 0;
+        no_of_mismatch = 0;
+        no_of_opening_gaps = 0;
+    }
     
-    public static Cell[][] globalForword(char[] s1, char[] s2)
+    public Cell[][] globalForword(char[] s1, char[] s2)
     {
         Cell[][] table = initGlobalCells(s1.length, s2.length);
 
@@ -29,11 +47,12 @@ class DNA
                 table[i][j].ins_score = insertion_score(table, i, j);
             }
         }
-        System.out.println("global score "+ Math.max(table[s1.length][s2.length].ins_score, Math.max(table[s1.length][s2.length].del_score, table[s1.length][s2.length].sub_score)));
+
+        optimum_score =  Math.max(table[s1.length][s2.length].ins_score, Math.max(table[s1.length][s2.length].del_score, table[s1.length][s2.length].sub_score));
         return table;
     }
 
-    public static Cell[][] localForword(char[] s1, char[] s2)
+    public Cell[][] localForword(char[] s1, char[] s2)
     {
         Cell[][] table = initLocalCells(s1.length, s2.length);
 
@@ -48,14 +67,14 @@ class DNA
 
                 table[i][j].ins_score = insertion_score(table, i, j);
 
-                int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
+                //int max = Math.max(table[i][j].ins_score, Math.max(table[i][j].del_score, table[i][j].sub_score));
                 
             }
         }
         return table;
     }
 
-    public static void globalBacktrack(char[] str1, char[] str2, Cell[][] table)
+    public void globalBacktrack(char[] str1, char[] str2, Cell[][] table)
     {
 
         int m = str1.length;
@@ -163,7 +182,7 @@ class DNA
 
     }
 
-    public static void localBacktrack(char[] str1, char[] str2, Cell[][] table)
+    public void localBacktrack(char[] str1, char[] str2, Cell[][] table)
     {
         int m = str1.length;
         int n = str2.length;
@@ -284,32 +303,29 @@ class DNA
 
     }
 
-    private static int deletion_score(Cell[][] table, int i, int j)
+    private int deletion_score(Cell[][] table, int i, int j)
     {
         return Math.max(table[i-1][j].sub_score + (h + gap_penalty), Math.max(table[i-1][j].del_score + gap_penalty, table[i-1][j].ins_score + (h + gap_penalty)));
     }
 
-    private static int insertion_score(Cell[][] table, int i, int j)
+    private int insertion_score(Cell[][] table, int i, int j)
     {
         return Math.max(table[i][j-1].sub_score + (h + gap_penalty), Math.max(table[i][j-1].del_score + (h + gap_penalty), table[i][j-1].ins_score + gap_penalty));
     }
 
-    private static int substitution_score(Cell[][] table, int i, int j, char[] s1, char[] s2)
+    private int substitution_score(Cell[][] table, int i, int j, char[] s1, char[] s2)
     {
         return Math.max(table[i-1][j-1].sub_score, Math.max(table[i-1][j-1].del_score, table[i-1][j-1].ins_score)) + substitution(s1[i-1], s2[j-1]);
     }
 
-    private static int substitution(char a, char b)
+    private int substitution(char a, char b)
     {
         return a == b ? match : mismatch;
     }
 
-    private static String calValues(String s1, String s2)
+    private void generateReport(String s1, String s2, BufferedWriter writer)
     {
-        int no_of_gaps = 0;
-        int no_of_matches = 0;
-        int no_of_mismatch = 0;
-        int no_of_opening_gaps = 0;
+
         StringBuilder middle = new StringBuilder(s1.length());
 
         int i = 0;
@@ -344,87 +360,107 @@ class DNA
             i++;
         }
 
-        System.out.println("Matches: " + no_of_matches);
-        System.out.println("Mismatches: " + no_of_mismatch);
-        System.out.println("Gaps: " + no_of_gaps);
-        System.out.println("Opening Gaps: "+ no_of_opening_gaps);
-
-        return middle.toString();
+        printAlign(middle.toString().toCharArray(), writer);
     }
 
-    public static void printAlign(char[] s1, char[] s2, char[] middle)
+    private void printAlign(char[] middle, BufferedWriter writer)
     {
+        char[] s1 = finalS1.toCharArray();
+        char[] s2 = finalS2.toCharArray();
         int c1 = 0;
         int c2 = 0;
         int prev;
         int len = middle.length;
 
-        for(int i=0; i< len; i+= 60)
+        try
         {
-            int count = 0;
-            if(i+60 >= len)
+            writer.write("Scores:  match = " + match + ", mismatch = "+ mismatch + ", h = " + h + ", g = " +gap_penalty);
+            writer.newLine();
+            writer.write("Sequence 1 = \"s1\", length = " + dnaStrings[0].length() + " characters.");
+            writer.write("\nSequence 2 = \"s2\", length = " + dnaStrings[1].length() + " characters.");
+            writer.write("\n\n");
+
+            for(int i=0; i< len; i+= 60)
             {
+                int count = 0;
+                if(i+60 >= len)
+                {
+                    prev = s1[i+0] != '-' ? c1+1 : c1; 
+                    writer.write("s1\t" + prev + "\t");
+                    for(int j=i+0; j < len; j++)
+                    {
+                        if(s1[j] != '-')
+                            c1++;
+                        writer.write(s1[j]);
+                    }
+                    writer.write("\t" + c1 + "\n");
+
+                    writer.write(" \t\t");
+                    for(int j=i+0; j < len; j++)
+                        writer.write(middle[j]);
+                    writer.newLine();
+
+                    prev = s2[i+0] != '-' ? c2+1 : c2; 
+                    writer.write("s2\t" + prev + "\t");
+                    for(int j=i+0; j < len; j++)
+                    {
+                        if(s2[j] != '-')
+                            c2++;
+                        writer.write(s2[j]);
+                    }
+                    writer.write("\t" + c2 + "\n");
+                    break;
+                }
+                
                 prev = s1[i+0] != '-' ? c1+1 : c1; 
-                System.out.print("s1\t" + prev + "\t");
-                for(int j=i+0; j < len; j++)
+                writer.write("s1\t" + prev + "\t");
+                for(int j=i+0; j < i+60; j++)
                 {
                     if(s1[j] != '-')
                         c1++;
-                    System.out.print(s1[j]);
+                    writer.write(s1[j]);
                 }
-                System.out.print("\t" + c1 + "\n");
+                writer.write("\t" + c1 + "\n");
 
-                System.out.print(" \t\t");
-                for(int j=i+0; j < len; j++)
-                    System.out.print(middle[j]);
-                System.out.println();
+                writer.write(" \t\t");
+                for(int j=i+0; j < i+60; j++)
+                    writer.write(middle[j]);
+                writer.newLine();
 
                 prev = s2[i+0] != '-' ? c2+1 : c2; 
-                System.out.print("s2\t" + prev + "\t");
-                for(int j=i+0; j < len; j++)
+                writer.write("s2\t" + prev + "\t");
+                for(int j=i+0; j < i+60; j++)
                 {
                     if(s2[j] != '-')
                         c2++;
-                    System.out.print(s2[j]);
+                    writer.write(s2[j]);
                 }
-                System.out.print("\t" + c2 + "\n");
-                break;
+                writer.write("\t" + c2 + "\n\n");
             }
-            
-            prev = s1[i+0] != '-' ? c1+1 : c1; 
-            System.out.print("s1\t" + prev + "\t");
-            for(int j=i+0; j < i+60; j++)
-            {
-                if(s1[j] != '-')
-                    c1++;
-                System.out.print(s1[j]);
-            }
-            System.out.print("\t" + c1 + "\n");
 
-            System.out.print(" \t\t");
-            for(int j=i+0; j < i+60; j++)
-                System.out.print(middle[j]);
-            System.out.println();
-
-            prev = s2[i+0] != '-' ? c2+1 : c2; 
-            System.out.print("s2\t" + prev + "\t");
-            for(int j=i+0; j < i+60; j++)
-            {
-                if(s2[j] != '-')
-                    c2++;
-                System.out.print(s2[j]);
-            }
-            System.out.print("\t" + c2 + "\n\n");
+            writer.newLine();
+            writer.write("Optimum Score: " + optimum_score +"\n");
+            writer.write("Matches: " + no_of_matches + "\n");
+            writer.write("Mismatches: " + no_of_mismatch + "\n");
+            writer.write("Gaps: " + no_of_gaps + "\n");
+            writer.write("Opening Gaps: "+ no_of_opening_gaps + "\n");
         }
+        catch(IOException e)
+        {
+            System.err.println("Error occur while processing file: " + e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+        
     }
 
-    public static String[] readFile(String file) throws IOException
+    private String[] readFile(String file) throws IOException
     {
         String S1 = null;
         String S2 = null;
         String[] dnaStrings = new String[2];
         StringBuilder builder = new StringBuilder();
         BufferedReader reader = new BufferedReader(new FileReader(file));
+        
         try 
         {
             String line = reader.readLine();
@@ -439,16 +475,19 @@ class DNA
                 builder.append(line);
             }
             S2 = builder.toString();
-        } 
+        }
+        catch(FileNotFoundException e)
+        {
+            System.err.println("File Not found" + e.getLocalizedMessage());
+        }
         finally{
             dnaStrings[0] = S1;
             dnaStrings[1] = S2;
-            reader.close();
         }
         return dnaStrings;
     }
 
-    private static Cell[][] initGlobalCells(int len1, int len2)
+    private Cell[][] initGlobalCells(int len1, int len2)
     {
         Cell[][] table = new Cell[len1+1][len2+1];
 
@@ -469,7 +508,7 @@ class DNA
         return table;
     }
 
-    private static Cell[][] initLocalCells(int len1, int len2)
+    private Cell[][] initLocalCells(int len1, int len2)
     {
         Cell[][] table = new Cell[len1+1][len2+1];
 
@@ -485,6 +524,25 @@ class DNA
 
         return table;
     }
+
+    private void mainHandler(String inFile) throws IOException
+    {
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(outFile)))
+        {
+            dnaStrings = this.readFile(inFile);
+            Cell[][] table = this.globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
+            this.globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
+        
+            this.generateReport(finalS1, finalS2, writer);
+        }
+        catch(IOException e)
+        {
+            System.err.println("Error occur while processing file: " + e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+
+        System.out.println("Done! Please check file.");
+    }
     
     public static void main(String[] args) throws IOException
     {
@@ -499,31 +557,8 @@ class DNA
             System.exit(0);
         }
 
-        gap_penalty = -2;
-        h = -5;
-        String[] dnaStrings = readFile(inFile);
-
-        // String s1 = "ACATGCTACACGTATCCGATACCCCGTAACCGATAACGATACACAGACCTCGTACGCTTGCTACAACGTACTCTATAACCGAGAACGATTGACATGCCTCGTACACATGCTACACGTACTCCGAT";
-        // String s2 = "ACATGCGACACTACTCCGATACCCCGTAACCGATAACGATACAGAGACCTCGTACGCTTGCTAATAACCGAGAACGATTGACATTCCTCGTACAGCTACACGTACTCCGAT";
-
-       // System.out.println(dnaStrings[0].length());
-       // System.out.println(dnaStrings[1].length());
-
-        Cell[][] table = globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
-
-       // String[] finAlign = globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
-        globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
+        DNA d = new DNA();
+        d.mainHandler(inFile);
         
-        String middle = calValues(finalS1, finalS2);
-        printAlign(finalS1.toCharArray(), finalS2.toCharArray(), middle.toCharArray());
-
-
-    //     Cell[][] table = globalForword(s1.toUpperCase().toCharArray(), s2.toUpperCase().toCharArray()); 
-
-    //    // String[] finAlign = globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
-    //     globalBacktrack1(s1.toCharArray(), s2.toCharArray(), table);
-        
-    //     String middle = calValues(finalS1, finalS2);
-    //     printAlign(finalS1.toCharArray(), finalS2.toCharArray(), middle.toCharArray());
     }
 }
