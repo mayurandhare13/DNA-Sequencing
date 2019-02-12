@@ -1,11 +1,14 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Properties;
 
 class DNA
 {
@@ -16,10 +19,6 @@ class DNA
 
     public DNA()
     {
-        gap_penalty = -2;
-        h = -5;
-        match = 1;
-        mismatch = -2;
         finalS1 = "";
         finalS2 = "";
         optimum_score = 0;
@@ -207,7 +206,6 @@ class DNA
         }
         
         int current_value = optimum_score;
-        System.out.println(current_value);
         i = max_i;
         j = max_j;
 
@@ -487,6 +485,32 @@ class DNA
         return dnaStrings;
     }
 
+    private void readParams(String paramFile) throws IOException
+    {
+        if(paramFile == null)
+        {
+            System.out.println("\tNo parameter file given. Results are with default parameters.");
+
+            gap_penalty = -2;
+            h = -5;
+            match = 1;
+            mismatch = -2;
+
+            System.out.println(String.format("\tDefault Parameters: match: %s, mismatch: %s, h: %s, g: %s", match, mismatch, h, gap_penalty));
+        }
+        else
+        {
+            Properties p = new Properties();
+            InputStream inProp = new FileInputStream(paramFile);
+            p.load(inProp);
+
+            match = Integer.parseInt(p.getProperty("match"));
+            mismatch = Integer.parseInt(p.getProperty("mismatch"));
+            h = Integer.parseInt(p.getProperty("h"));
+            gap_penalty = Integer.parseInt(p.getProperty("g"));
+        }
+    }
+
     private Cell[][] initGlobalCells(int len1, int len2)
     {
         Cell[][] table = new Cell[len1+1][len2+1];
@@ -525,20 +549,39 @@ class DNA
         return table;
     }
 
-    private void mainHandler(String inFile) throws IOException
+    private void mainHandler(String inFile, int align_type, String paramFile) throws IOException
     {
         try(BufferedWriter writer = new BufferedWriter(new FileWriter(outFile)))
         {
             dnaStrings = this.readFile(inFile);
-            Cell[][] table = this.globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
-            this.globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
-        
-            this.generateReport(finalS1, finalS2, writer);
+            readParams(paramFile);
+
+            if(align_type == 0)
+            {
+                Cell[][] table = this.globalForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
+                this.globalBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
+            
+                this.generateReport(finalS1, finalS2, writer);
+            }
+            else if(align_type == 1)
+            {
+                Cell[][] table = this.localForword(dnaStrings[0].toUpperCase().toCharArray(), dnaStrings[1].toUpperCase().toCharArray()); 
+                this.localBacktrack(dnaStrings[0].toCharArray(), dnaStrings[1].toCharArray(), table);
+            
+                this.generateReport(finalS1, finalS2, writer);
+            }
+            else
+            {
+                System.out.println("wrong option");
+                System.exit(101);
+            }
+
         }
         catch(IOException e)
         {
             System.err.println("Error occur while processing file: " + e.getLocalizedMessage());
             e.printStackTrace();
+            System.exit(101);
         }
 
         System.out.println("Done! Please check file.");
@@ -547,9 +590,22 @@ class DNA
     public static void main(String[] args) throws IOException
     {
         String inFile = null;
+        String paramFile = null;
+        int align_type = 0;
+
         if (0 < args.length) 
         {
             inFile = args[0];
+            try {
+                align_type = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                System.err.println("You missed it. Alignment Numbers are --> Global: 0 and Local: 1");
+                System.out.println(e.getMessage());
+                System.exit(1);
+            }
+            if(args.length == 3)
+                paramFile = args[2];
+            
         } 
         else 
         {
@@ -558,7 +614,7 @@ class DNA
         }
 
         DNA d = new DNA();
-        d.mainHandler(inFile);
+        d.mainHandler(inFile, align_type, paramFile);
         
     }
 }
