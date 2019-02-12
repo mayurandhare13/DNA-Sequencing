@@ -13,7 +13,7 @@ import java.util.Properties;
 class DNA
 {
     int gap_penalty, h, match, mismatch, optimum_score, no_of_gaps, no_of_matches, no_of_mismatch, no_of_opening_gaps;
-    String finalS1, finalS2, middle;
+    String finalS1, finalS2, middle, seq1, seq2;
     String[] dnaStrings;
     File outFile;
 
@@ -374,8 +374,8 @@ class DNA
         {
             writer.write("Scores:  match = " + match + ", mismatch = "+ mismatch + ", h = " + h + ", g = " +gap_penalty);
             writer.newLine();
-            writer.write("Sequence 1 = \"s1\", length = " + dnaStrings[0].length() + " characters.");
-            writer.write("\nSequence 2 = \"s2\", length = " + dnaStrings[1].length() + " characters.");
+            writer.write("\nSequence 1 = " + seq1 + "\nlength = " + dnaStrings[0].length() + " characters.");
+            writer.write("\n\nSequence 2 = " + seq2 + "\nlength = " + dnaStrings[1].length() + " characters.");
             writer.write("\n\n");
 
             for(int i=0; i< len; i+= 60)
@@ -462,11 +462,13 @@ class DNA
         try 
         {
             String line = reader.readLine();
+            seq1 = line;
             while ((line = reader.readLine()) != null)
             {
                 if(line.startsWith(">"))
                 {
                     S1 = builder.toString();
+                    seq2 = line;
                     builder.delete(0, builder.length());
                     continue;
                 }
