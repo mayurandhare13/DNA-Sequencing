@@ -442,6 +442,11 @@ class DNA
             writer.write("Mismatches: " + no_of_mismatch + "\n");
             writer.write("Gaps: " + no_of_gaps + "\n");
             writer.write("Opening Gaps: "+ no_of_opening_gaps + "\n");
+            int total = no_of_matches + no_of_mismatch + no_of_gaps;
+            float idRes = (no_of_matches/(float)total)*100;
+            writer.write(String.format("Identities = %s / %s (%2.0f%%)\n", no_of_matches, total, idRes));
+            idRes = (no_of_gaps / (float)total)*100;
+            writer.write(String.format("Gaps = %s / %s (%2.0f%%)", no_of_gaps, total, idRes));
         }
         catch(IOException e)
         {
